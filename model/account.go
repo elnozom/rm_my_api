@@ -6,6 +6,24 @@ type GetAccountRequest struct {
 	Type int    `json:"Type" validate:"required"`
 }
 
+type MonthlyReportReq struct {
+	Year  int `query:"Year" validate:"required"`
+	Month int `query:"Month" validate:"required"`
+}
+
+type MonthlyReportResp struct {
+	DocDay       int
+	SessionNo    int
+	TotalCash    float64
+	CashierMoney float64
+	AmountIn     float64
+	Supplier     float64
+	Expenses     float64
+	BankIn       float64
+	TotalVisa    float64
+	Net          float64
+}
+
 type InsertStktr01Request struct {
 	TransactionType int
 	Safe            int

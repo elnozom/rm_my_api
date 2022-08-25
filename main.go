@@ -33,7 +33,8 @@ func main() {
 		panic(err)
 	}
 	userRepo := repo.NewUserRepo(dbs)
-	h := handler.NewHandler(dbs, userRepo)
+	accountRepo := repo.NewAccountRepo(dbs)
+	h := handler.NewHandler(dbs, userRepo, accountRepo)
 	h.Register(v1)
 	port := fmt.Sprintf(":%s", config.Config("PORT"))
 	r.Logger.Fatal(r.Start(port))
