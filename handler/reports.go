@@ -134,46 +134,18 @@ func (h *Handler) AccTr01Insert(c echo.Context) error {
 	return c.JSON(http.StatusOK, "success")
 }
 func (h *Handler) GetAccountBalance(c echo.Context) error {
-
 	req := new(model.GetAccountBalanceRequest)
-
 	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	var resp model.GetAccountBalanceResponse
-	var data []model.GetAccountBalanceData
 	dbIndex := c.Get("dbIndex").(uint)
-	dateRows, err := h.dbs[dbIndex].Raw("EXEC AccTr01GetBalancBefore @DateFrom = ?, @AccSerial = ? ;", req.FromDate, req.AccSerial).Rows()
+	fmt.Println(dbIndex)
+	data, err := h.accountRepo.GetAccountBalance(req, dbIndex)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
-	}
-	rows, err := h.dbs[dbIndex].Raw("EXEC AccTr01CashFlow @DateFrom = ?, @DateTo = ? , @AccSerial = ? ;", req.FromDate, req.ToDate, req.AccSerial).Rows()
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 
-	defer rows.Close()
-	defer dateRows.Close()
-
-	for dateRows.Next() {
-		dateRows.Scan(&resp.Raseed)
-	}
-	var raseed = math.Abs(resp.Raseed)
-	for rows.Next() {
-		var rec model.GetAccountBalanceData
-		rows.Scan(&rec.DocNo, &rec.DocDate, &rec.AccMoveName, &rec.Dbt, &rec.Crdt)
-		r := raseed + (rec.Dbt - rec.Crdt)
-		if r > 0 {
-			rec.RaseedDbt = r
-		} else {
-			rec.RaseedCrdt = math.Abs(r)
-		}
-		raseed = r
-		data = append(data, rec)
-	}
-	resp.Data = data
-
-	return c.JSON(http.StatusOK, resp.Data)
+	return c.JSON(http.StatusOK, data)
 }
 func (h *Handler) GetAccountBalanceBefore(c echo.Context) error {
 
@@ -268,17 +240,19 @@ func (h *Handler) GetCashFlow(c echo.Context) error {
 		var CashFlow model.CashFlow
 		err = rows.Scan(
 			&CashFlow.DocDate,
-			&CashFlow.Income,
+			&CashFlow.Customer,
+			&CashFlow.OtherIn,
+			&CashFlow.FromBank,
 			&CashFlow.Supplier,
-			&CashFlow.Expensis,
-			&CashFlow.Others,
-			&CashFlow.Bankin,
-			&CashFlow.Cheqout,
-			&CashFlow.Cheqin,
+			&CashFlow.Expenses,
+			&CashFlow.OtherOut,
+			&CashFlow.ToBank,
 		)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, "can't scan the values")
+			return c.JSON(http.StatusInternalServerError, "can't scan the values "+err.Error())
 		}
+		CashFlow.TotalCredit = CashFlow.Customer + CashFlow.OtherIn + CashFlow.FromBank
+		CashFlow.TotalDebit = CashFlow.Supplier + CashFlow.Expenses + CashFlow.OtherOut + CashFlow.ToBank
 		CashFlows = append(CashFlows, CashFlow)
 	}
 
@@ -344,16 +318,16 @@ func (h *Handler) GetCashFlowYear(c echo.Context) error {
 	defer rows.Close()
 	for rows.Next() {
 		var CashFlow model.CashFlow
-		err = rows.Scan(
-			&CashFlow.DocDate,
-			&CashFlow.Income,
-			&CashFlow.Supplier,
-			&CashFlow.Expensis,
-			&CashFlow.Others,
-			&CashFlow.Bankin,
-			&CashFlow.Cheqout,
-			&CashFlow.Cheqin,
-		)
+		// err = rows.Scan(
+		// 	&CashFlow.DocDate,
+		// 	&CashFlow.Income,
+		// 	&CashFlow.Supplier,
+		// 	&CashFlow.Expensis,
+		// 	&CashFlow.Others,
+		// 	&CashFlow.Bankin,
+		// 	&CashFlow.Cheqout,
+		// 	&CashFlow.Cheqin,
+		// )
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, "can't scan the values")
 		}
@@ -741,40 +715,15 @@ func (h *Handler) GetDailySales(c echo.Context) error {
 }
 
 func (h *Handler) GetBalnaceOfTrade(c echo.Context) error {
-
 	req := new(model.GetBalanceOfTradeRequest)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
-	var resp []model.GetBalanceOfTradeResponse
-	var rows *sql.Rows
-	var rowErr error
-	if req.PayCheq {
-		dbIndex := c.Get("dbIndex").(uint)
-		rows, rowErr = h.dbs[dbIndex].Raw("EXEC balanceoftrade1 @AccountType = ? , @DateFrom = ? , @DateTo = ?", req.AccType, req.FromDate, req.ToDate).Rows()
-	} else {
-		dbIndex := c.Get("dbIndex").(uint)
-		rows, rowErr = h.dbs[dbIndex].Raw("EXEC balanceoftrade @AccountType = ? , @DateFrom = ? , @DateTo = ?", req.AccType, req.FromDate, req.ToDate).Rows()
+	dbIndex := c.Get("dbIndex").(uint)
+	resp, err := h.accountRepo.BalanceOfTrade(req, dbIndex)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "err calling stored procedure "+err.Error())
 	}
-	if rowErr != nil {
-		return c.JSON(http.StatusInternalServerError, "err doing stored procedure"+rowErr.Error())
-	}
-
-	defer rows.Close()
-	for rows.Next() {
-		var rec model.GetBalanceOfTradeResponse
-		if err := rows.Scan(&rec.AccountCode, &rec.AccountName, &rec.AccNo, &rec.BBC, &rec.BBD, &rec.BAC, &rec.BAD); err != nil {
-			return c.JSON(http.StatusInternalServerError, "err scanning result"+err.Error())
-		}
-		val := (rec.BBC + rec.BAC) - (rec.BBD + rec.BAD)
-		if val > 0 {
-			rec.Credit = math.Abs(val)
-		} else {
-			rec.Debit = math.Abs(val)
-		}
-		resp = append(resp, rec)
-	}
-
 	return c.JSON(http.StatusOK, resp)
 }
 

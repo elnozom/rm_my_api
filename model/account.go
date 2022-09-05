@@ -47,6 +47,8 @@ type GetAccountBalanceData struct {
 	Crdt        float64
 	RaseedCrdt  float64
 	RaseedDbt   float64
+	Note        string
+	Account2    string
 }
 
 type GetAccountBalanceResponse struct {

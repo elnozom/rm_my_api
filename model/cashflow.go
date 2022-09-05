@@ -1,14 +1,16 @@
 package model
 
 type CashFlow struct {
-	DocDate  string
-	Income   float32
-	Supplier float32
-	Expensis float32
-	Others   float32
-	Bankin   float32
-	Cheqout  float32
-	Cheqin   float32
+	DocDate     string
+	Customer    float32
+	OtherIn     float32
+	FromBank    float32
+	Supplier    float32
+	Expenses    float32
+	OtherOut    float32
+	ToBank      float32
+	TotalDebit  float32
+	TotalCredit float32
 }
 
 type CashFlowYearReq struct {
