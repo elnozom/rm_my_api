@@ -11,7 +11,10 @@ func (h *Handler) Register(v1 *echo.Group) {
 	jwtMiddleware := middleware.JWT(utils.JWTSecret)
 
 	v1.GET("/me", h.Login, jwtMiddleware)
+	v1.POST("/upload", h.Upload)
+
 	v1.POST("/login", h.Login)
+	v1.PUT("/store", h.DefaultStoreUpdate, jwtMiddleware)
 
 	cashtry := v1.Group("/cashtray", jwtMiddleware)
 	cashtry.GET("", h.CashTryAnalysis)
@@ -48,4 +51,13 @@ func (h *Handler) Register(v1 *echo.Group) {
 	v1.GET("/balance/before", h.GetAccountBalanceBefore, jwtMiddleware)
 	v1.GET("/get-account", h.GetAccount, jwtMiddleware)
 	v1.GET("/monthly-report", h.MonthlyReport, jwtMiddleware)
+
+	groupG := v1.Group("/group", jwtMiddleware)
+	groupG.GET("", h.MainGroupsList)
+	groupG.GET("/:group", h.SubGroupsList)
+
+	itemsG := v1.Group("/item", jwtMiddleware)
+	itemsG.GET("/:group/:tableSerial", h.ItemsList)
+	itemsG.PUT("/image", h.UpdateImage)
+
 }

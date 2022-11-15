@@ -12,6 +12,11 @@ func (h *Handler) CurrentUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, "valid")
 }
 
+func (h *Handler) DefaultStoreUpdate(c echo.Context) error {
+
+	return c.JSON(http.StatusOK, "r")
+}
+
 func (h *Handler) Login(c echo.Context) error {
 	req := new(model.UserLoginRequest)
 
