@@ -11,6 +11,7 @@ func (h *Handler) Register(v1 *echo.Group) {
 	jwtMiddleware := middleware.JWT(utils.JWTSecret)
 
 	v1.GET("/me", h.Login, jwtMiddleware)
+	v1.GET("/user", h.GetUser, jwtMiddleware)
 	v1.POST("/upload", h.Upload)
 
 	v1.POST("/login", h.Login)

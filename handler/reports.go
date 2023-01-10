@@ -459,7 +459,7 @@ func (h *Handler) OpenCashTry(c echo.Context) error {
 	}
 	var openCashtries []model.OpenCashtry
 	dbIndex := c.Get("dbIndex").(uint)
-	rows, err := h.dbs[dbIndex].Raw("EXEC GetOpenCashTry").Rows()
+	rows, err := h.dbs[dbIndex].Raw("EXEC GetOpenCashTry @store = ?", req.Store).Rows()
 	if err != nil {
 		return c.JSON(http.StatusOK, err.Error())
 	}
